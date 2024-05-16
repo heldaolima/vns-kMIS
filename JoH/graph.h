@@ -22,6 +22,7 @@ public:
     vector<bool> is_elem;//Vetor de tamanho igual a quantidade de vertices, onde o índice j será true se o subconjunto j está na solução.
     vector<int> elem;//Vetor com os indices dos subconjuntos que pertecem a solução.
     int tam_L;
+    double timeFound = 0.0;
 
     Solucao(int tam_L){
         this->tam_L = tam_L;

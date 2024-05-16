@@ -42,6 +42,7 @@ tipo: 2 instancias dos três tipos e na primeira linha temos |L|, |R|, qtd arest
 tipo: 3 instancias dos três tipos e na primeira linha temos |L|, |R|, qtd arestas. O valor de k deve ser setado fora do metodo e antes de chamar o metodo.
 **/
 bool Graph::read_file(const char *filename){
+    std::cout << "file: " << filename << "\n";
     ifstream input_fh(filename);
     int tem_solucao = 0;
     if (input_fh.is_open()){

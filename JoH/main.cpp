@@ -1,3 +1,5 @@
+#include <cstdio>
+#include <ctime>
 #include <iostream>
 #include <bitset>
 #include <vector>
@@ -19,57 +21,73 @@ string path_dir = "..//Instances//Random//Journal_of_heuristics//";
 /**
 Run vns countTime times storing the value and time of each run.
 **/
-void execute_vns_repeat_armazenar(string file, Graph &graph, string nameFileOut, string nameFileOut2, int countTime){
+void execute_vns_repeat_armazenar(string file, Graph &graph, 
+                                  string nameFileOut, string nameFileOut2, 
+                                  int countTime) {
     double tempo;
     clock_t t1, t2;
     FILE *txt;
     int valor_solucao = 0;
-    double media_solucao = 0, media_tempo = 0;
-    int melhor_solucao = -1, pior_solucao = graph.tam_R;
+    double media_solucao = 0, media_tempo = 0, media_found = 0;
+    int melhor_solucao = -1, pior_solucao = graph.tam_R, sol_entrada;
 
-	Solucao solucaoH = heuristica_kinter_estendida_path_relinking(graph);
-	int sol_entrada = solucaoH.vectorBits.count();
-	vector<int> solucoes;
-	vector<double> tempos;
+    vector<int> solucoes;
+    vector<double> tempos;
+
+    Solucao solucaoH(graph.tam_L);
     for(int i = 1; i <= countTime; i++){
         t1 = clock();
+        solucaoH = heuristica_kinter_estendida_path_relinking(graph);
+        sol_entrada = solucaoH.vectorBits.count();
+        t2 = clock();
+        solucaoH.timeFound = (t2 - t1) / (double) CLOCKS_PER_SEC;
+
         Solucao solucao = solucaoH;
         int sol_heuristica = solucao.vectorBits.count();
 
-        if(sol_heuristica < graph.tam_R){
-			solucao = VNS_Reativo(graph, solucao);
-		}
+        if (sol_heuristica < graph.tam_R){
+            solucao = VNS_Reativo(graph, solucao, t1);
+        }
         valor_solucao = solucao.vectorBits.count();
 
         t2 = clock();
         tempo = (t2 - t1)/ (double) CLOCKS_PER_SEC;
 
-		solucoes.push_back(valor_solucao);
-		tempos.push_back(tempo);
+        solucoes.push_back(valor_solucao);
+        tempos.push_back(tempo);
 
         media_tempo += tempo;
         media_solucao += valor_solucao;
+        media_found += solucao.timeFound;
 
         if(melhor_solucao < valor_solucao) melhor_solucao = valor_solucao;
         if(pior_solucao > valor_solucao) pior_solucao = valor_solucao;
     }
+
     media_tempo /= countTime;
     media_solucao /= countTime;
+    media_found /= countTime;
 
     txt = fopen(nameFileOut.c_str(), "a+");
-    fprintf(txt, "%s\t", file.c_str());
-    fprintf(txt, "%d\t", graph.k);
-	fprintf(txt, "%d\t", sol_entrada);
-    fprintf(txt, "%f\t%.2f\t", media_tempo, media_solucao);
-    fprintf(txt, "%d\t%d\n", pior_solucao, melhor_solucao);
-	fclose(txt);
+    fprintf(txt, "input,best,worst,avg_obj,avg_time_to_best\n");
+    fprintf(txt, "%s,%d,%d,%f,%f\n", 
+            file.c_str(), melhor_solucao, pior_solucao, media_solucao, media_found);
+    // fprintf(txt, "%d,%d", melhor_solucao, pior_solucao);
+    // fprintf(txt, "%f,", media_solucao);
+    // fprintf(txt, "%lf\n", media_found);
 
-	txt = fopen(nameFileOut2.c_str(), "a+");
-	for(int i = 0; i < countTime; i++){
-		fprintf(txt, "%s\t", file.c_str());
-		fprintf(txt, "%d\t%f\n", solucoes[i], tempos[i]);
-	}
-	fclose(txt);
+    fclose(txt);
+
+    // fprintf(txt, "%d\t", graph.k);
+    // fprintf(txt, "%d\t", sol_entrada);
+    // fprintf(txt, "%f\t%.2f\t", media_tempo, media_solucao);
+
+    txt = fopen(nameFileOut2.c_str(), "a+");
+    for(int i = 0; i < countTime; i++){
+        fprintf(txt, "%s\t", file.c_str());
+        fprintf(txt, "%d\t%f\n", solucoes[i], tempos[i]);
+    }
+    fclose(txt);
 }
 
 /**
@@ -83,16 +101,16 @@ void execute_vns_repeat(string file, Graph &graph, string nameFileOut, int count
     double media_solucao = 0, media_tempo = 0;
     int melhor_solucao = -1, pior_solucao = graph.tam_R;
 
-	Solucao solucaoH = heuristica_kinter_estendida_path_relinking(graph);
-	int sol_entrada = solucaoH.vectorBits.count();
+    Solucao solucaoH = heuristica_kinter_estendida_path_relinking(graph);
+    int sol_entrada = solucaoH.vectorBits.count();
     for(int i = 1; i <= countTime; i++){
         t1 = clock();
         Solucao solucao = solucaoH;
         int sol_heuristica = solucao.vectorBits.count();
 
         if(sol_heuristica < graph.tam_R){
-			solucao = VNS_Reativo(graph, solucao);
-		}
+            solucao = VNS_Reativo(graph, solucao, t1);
+        }
         valor_solucao = solucao.vectorBits.count();
         t2 = clock();
         tempo = (t2 - t1)/ (double) CLOCKS_PER_SEC;
@@ -109,7 +127,7 @@ void execute_vns_repeat(string file, Graph &graph, string nameFileOut, int count
     txt = fopen(nameFileOut.c_str(), "a+");
     fprintf(txt, "%s\t", file.c_str());
     fprintf(txt, "%d\t", graph.k);
-	fprintf(txt, "%d\t", sol_entrada);
+    fprintf(txt, "%d\t", sol_entrada);
     fprintf(txt, "%f\t%.2f\t", media_tempo, media_solucao);
     fprintf(txt, "%d\t%d\n", pior_solucao, melhor_solucao);
     fclose(txt);
@@ -132,7 +150,7 @@ void execute_grasp(string file, Graph &graph, int countTime){
     Grasp grasp(graph);
     for(int i = 1; i <= countTime; i++){
         t1 = clock();
-        Solucao sol = grasp.grasp_reativo();
+        Solucao sol = grasp.grasp_reativo(t1);
         valor_solucao = sol.vectorBits.count();
         t2 = clock();
         tempo = (t2 - t1)/ (double) CLOCKS_PER_SEC;
@@ -163,7 +181,7 @@ void execute_grasp_armazenar(string file, Graph &graph, string nameFileOut, stri
     clock_t t1, t2;
     FILE *txt;
     int valor_solucao = 0;
-    double media_solucao = 0, media_tempo = 0;
+    double media_solucao = 0, media_tempo = 0, media_found = 0.0;
     int melhor_solucao = -1, pior_solucao = graph.tam_R;
 
     media_solucao = 0;
@@ -171,21 +189,22 @@ void execute_grasp_armazenar(string file, Graph &graph, string nameFileOut, stri
     melhor_solucao = -1;
     pior_solucao = graph.tam_R;
 
-	Grasp grasp(graph);
-	vector<int> solucoes;
-	vector<double> tempos;
+    Grasp grasp(graph);
+    vector<int> solucoes;
+    vector<double> tempos;
     for(int i = 1; i <= countTime; i++){
         t1 = clock();
-        Solucao sol = grasp.grasp_reativo();
+        Solucao sol = grasp.grasp_reativo(t1);
         valor_solucao = sol.vectorBits.count();
         t2 = clock();
         tempo = (t2 - t1)/ (double) CLOCKS_PER_SEC;
 
-		solucoes.push_back(valor_solucao);
-		tempos.push_back(tempo);
+        solucoes.push_back(valor_solucao);
+        tempos.push_back(tempo);
 
         media_tempo += tempo;
         media_solucao += valor_solucao;
+        media_found += sol.timeFound;
 
         if(melhor_solucao < valor_solucao) melhor_solucao = valor_solucao;
         if(pior_solucao > valor_solucao) pior_solucao = valor_solucao;
@@ -193,19 +212,27 @@ void execute_grasp_armazenar(string file, Graph &graph, string nameFileOut, stri
     media_tempo /= countTime;
     media_solucao /= countTime;
 
-	txt = fopen(nameFileOut.c_str(), "a+");
-    fprintf(txt, "%s\t", file.c_str());
-    fprintf(txt, "%d\t", graph.k);
-    fprintf(txt, "%f\t%.2f\t", media_tempo, media_solucao);
-    fprintf(txt, "%d\t%d\n", pior_solucao, melhor_solucao);
+    txt = fopen(nameFileOut.c_str(), "a+");
+
+    fprintf(txt, "input,best,worst,avg_obj,avg_time_to_best\n");
+    fprintf(txt, "%s,%d,%d,%f,%f\n", 
+            file.c_str(), melhor_solucao, pior_solucao, media_solucao, media_found);
+
     fclose(txt);
 
-	txt = fopen(nameFileOut2.c_str(), "a+");
-	for(int i = 0; i < countTime; i++){
-		fprintf(txt, "%s\t", file.c_str());
-		fprintf(txt, "%d\t%f\n", solucoes[i], tempos[i]);
-	}
-	fclose(txt);
+    // txt = fopen(nameFileOut.c_str(), "a+");
+    // fprintf(txt, "%s\t", file.c_str());
+    // fprintf(txt, "%d\t", graph.k);
+    // fprintf(txt, "%f\t%.2f\t", media_tempo, media_solucao);
+    // fprintf(txt, "%d\t%d\n", pior_solucao, melhor_solucao);
+    // fclose(txt);
+
+    txt = fopen(nameFileOut2.c_str(), "a+");
+    for(int i = 0; i < countTime; i++){
+        fprintf(txt, "%s\t", file.c_str());
+        fprintf(txt, "%d\t%f\n", solucoes[i], tempos[i]);
+    }
+    fclose(txt);
 }
 
 
@@ -247,20 +274,20 @@ int execute_all(int type, string nameDir){
 }
 
 int main(){
-    #ifdef __linux__
-            srand48(time(NULL));
-    #elif _WIN32
-            srand(time(NULL));
-    #else
-            #error "OS not supported!"
-    #endif
+#ifdef __linux__
+    srand48(time(NULL));
+#elif _WIN32
+    srand(time(NULL));
+#else
+    #error "OS not supported!"
+#endif
 
     string pathDir = "Gilbert//";
 
     if(KMIS_E_CARD == 1 || KMIS_E_CARD == 4)
-		execute_all(1, pathDir);
+        execute_all(1, pathDir);
     else if(KMIS_E_CARD == 2 || KMIS_E_CARD == 5)
-		execute_all(2, pathDir);
+        execute_all(2, pathDir);
     else execute_all(3, pathDir);
 
     return 0;

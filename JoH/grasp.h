@@ -17,7 +17,7 @@ public:
     void busca_local(Solucao &solucao);
     Solucao path_relinking(Solucao &solucao);
     Solucao grasp();
-    Solucao grasp_reativo();
+    Solucao grasp_reativo(clock_t t1);
 
     int get_alfa();
     void atualizacao_probabilidade(int Z_max);

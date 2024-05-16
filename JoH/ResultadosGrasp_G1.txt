@@ -1,0 +1,4 @@
+input,best,worst,avg_obj,avg_time_to_best
+classe_1_40_40,4,4,4.000000,0.174286
+input,best,worst,avg_obj,avg_time_to_best
+classe_1_60_60,5,5,5.000000,0.412872

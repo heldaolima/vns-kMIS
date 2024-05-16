@@ -1,6 +1,7 @@
 #ifndef KMIS_VNS_H
 #define KMIS_VNS_H
 #include <cmath>
+#include <ctime>
 #include "graph.h"
 #include "vnd.h"
 #include "grasp.h"
@@ -27,7 +28,7 @@ void liberarLista(Lista* fila);
 //##############################################################################
 
 /**Algoritmo VNS Reativo.**/
-Solucao VNS_Reativo(Graph &graph, Solucao &solucao_entrada);
+Solucao VNS_Reativo(Graph &graph, Solucao &solucao_entrada, clock_t t1);
 
 
 

@@ -1,4 +1,5 @@
 #include "grasp.h"
+#include <cstdio>
 
 
 Grasp::Grasp(Graph &graph){
@@ -53,10 +54,10 @@ Solucao Grasp::construcao(double alfa){
         */
         int s = get_subconjunto(lrc, randValor(0, tam_lrc - 1));
 
-        #ifdef DEBUG
-            cout << "subconjunto escolhido = " << s << endl;
-            cout << "custo incremental     = " << custo_incremental[s] << endl;
-        #endif
+#ifdef DEBUG
+        cout << "subconjunto escolhido = " << s << endl;
+        cout << "custo incremental     = " << custo_incremental[s] << endl;
+#endif
 
         solucao.is_elem[s] = true;//Indico que está na solução
         solucao.elem.push_back(s);//Add no vetor
@@ -227,179 +228,70 @@ int Grasp::get_alfa(){
     for(int w = 1; w < 11; w++) prob_acumulativa[w] = prob_acumulativa[w - 1] + prob_X[w];
 
     double x;
-    #ifdef __linux__
-        x = drand48();//Linux
-    #elif _WIN32
-        x = (double)rand()/RAND_MAX;//Windons
-    #else
-		#error "OS not supported!"
-    #endif
+#ifdef __linux__
+    x = drand48();//Linux
+#elif _WIN32
+    x = (double)rand()/RAND_MAX;//Windons
+#else
+    #error "OS not supported!"
+#endif
 
     for(int i = 0; i < 11; i++) if(x <= prob_acumulativa[i]) return i;
 }
 
 
 void Grasp::atualizacao_probabilidade(int Z_max){
-	double Q[NUMBER_VALUES];
-	double sigma = 0.0;
+    double Q[NUMBER_VALUES];
+    double sigma = 0.0;
 
-	#ifdef DEBUG
-        cout << "ATUALIZACAO VETOR DE PROBABILIDADES " << endl;
-	#endif
+    #ifdef DEBUG
+    cout << "ATUALIZACAO VETOR DE PROBABILIDADES " << endl;
+    #endif
 
 
-	bool falha = false;
+    bool falha = false;
 
-	for(int k = 0; k < NUMBER_VALUES; k++){
-		if(cont[k] == 0) {
-			#ifdef DEBUG
-                printf("FALHOU\n");
-			#endif
-			falha = true;
-			break;
-		}
-		avg[k] = score[k]/cont[k];
-		//Q[k] = melhor_solucao.vectorBits.count()/avg[k];
-		Q[k] = avg[k]/Z_max;
+    for(int k = 0; k < NUMBER_VALUES; k++){
+        if(cont[k] == 0) {
+            #ifdef DEBUG
+            printf("FALHOU\n");
+            #endif
+            falha = true;
+            break;
+        }
+        avg[k] = score[k]/cont[k];
+        //Q[k] = melhor_solucao.vectorBits.count()/avg[k];
+        Q[k] = avg[k]/Z_max;
 
-		sigma += Q[k];
+        sigma += Q[k];
 
-		#ifdef DEBUG
-            printf("valor %d media %lf q %lf\n", k, avg[k], Q[k]);
-		#endif
-
-	}
-	if(!falha){
         #ifdef DEBUG
-            printf("PROCESSO BEM SUCEDIDO\n");
+        printf("valor %d media %lf q %lf\n", k, avg[k], Q[k]);
         #endif
+
+    }
+    if(!falha){
+#ifdef DEBUG
+        printf("PROCESSO BEM SUCEDIDO\n");
+#endif
         for(int k = 0; k < NUMBER_VALUES; k++){
             prob_X[k] = Q[k]/sigma;
-            #ifdef DEBUG
-                printf("prob[%d] = %lf\n", k, Q[k]/sigma);
-            #endif
+#ifdef DEBUG
+            printf("prob[%d] = %lf\n", k, Q[k]/sigma);
+#endif
 
         }
-	}else{
-		#ifdef DEBUG
-            printf("PROCESSO FALHOU\n");
-		#endif
-	}
+    }else{
+        #ifdef DEBUG
+        printf("PROCESSO FALHOU\n");
+        #endif
+    }
 }
 
 Solucao Grasp::grasp(){
-    #ifdef DEBUG
-        cout << "-----------GRASP------" << endl;
-    #endif
-
-    solucoes_elites.clear();
-
-    int custo_melhor_solucao = 0;
-
-    Solucao melhor_solucao(graph.tam_L);
-
-    melhor_solucao_construcao = -1;
-
-    bool apicar_buscar_path = true;
-
-    //Inicializando os valores iniciais do grasp reativo
-    for(int i = 0; i < NUMBER_VALUES; i++){
-			cont[i] = 0;
-			score[i] = 0.0;
-			prob_X[i] = 1.0/NUMBER_VALUES;
-    }
-
-    for(int i = 0; i < qtd_max_iteracoes; i++){
-
-        #ifdef DEBUG
-			cout << "Iteracao: " << i << endl;
-        #endif
-
-        int indice_alfa = get_alfa();
-        double alfa = cons_X[indice_alfa];
-
-        #ifdef DEBUG
-            cout << "alpha = " << alfa << endl;
-            cout << "FASE CONSTRUCAO " << endl;
-        #endif
-
-
-        Solucao solucao = construcao(alfa);
-
-
-        #ifdef DEBUG
-            cout << "Solucao size construcao : "  << solucao.vectorBits.count() << endl;
-        #endif
-
-
-
-        //No artigo eles relatam que só aplicam a busca local e path relinking
-        //se a solução obtida pela construção é pelo menos 80% da melhor solução encontrada até agora.
-        if(solucao.vectorBits.count() >= 0.8*melhor_solucao.vectorBits.count()) {
-
-					busca_local(solucao);
-
-					/*
-					Aqui implemento a maneira que a solução encontrada na busca local será inserida na lista elite.
-					Quando a quantidade máxima não é alcançada, adiciona na lista elite.
-					Quando a quantidade máxima já é alcançada, trocamos a solução da lista elite mais parecida com a solução
-					e que tenha custo pior que da solução.
-
-					Nao coloquei isso dentro da propria função path_relinking, porque achei que ficaria mais complicado o retorno
-					da função path_relinking.
-					*/
-
-					if(solucoes_elites.size() >= 1){
-							solucao = path_relinking(solucao);
-					}
-					//Atualizo a lista elite.
-					if(solucoes_elites.size() < max_elite) solucoes_elites.push_back(solucao);
-					else{
-							int menor_dif = graph.k + 12;
-							int posicao_menor_dif = -1;
-							for(int j = 0; j < solucoes_elites.size(); j++){
-									if(solucao.vectorBits.count() > solucoes_elites[j].vectorBits.count()){
-											int dif = diferenca_simetrica(solucao, solucoes_elites[j], graph.k);
-											if(menor_dif > dif){
-													menor_dif = dif;
-													posicao_menor_dif = j;
-											}
-									}
-							}
-							if(posicao_menor_dif != -1){
-									solucoes_elites[posicao_menor_dif] = solucao;
-							}
-                    }
-        }
-
-        if(i == 0) melhor_solucao = solucao;
-        else if(solucao.vectorBits.count() > melhor_solucao.vectorBits.count()){
-                melhor_solucao = solucao;
-                if(melhor_solucao.vectorBits.count() == graph.tam_R) break;
-        }
-
-        cont[indice_alfa]++;
-		score[indice_alfa] += solucao.vectorBits.count();
-
-        #ifdef DEBUG
-            printf("cont[%d] = %d, score[%d] = %lf\n", indice_alfa, cont[indice_alfa], indice_alfa, score[indice_alfa]);
-        #endif
-
-
-        #ifdef DEBUG
-            cout << "Solucao size final : "  << solucao.vectorBits.count() << endl;
-            cout << "--------------------------------------" << endl;
-        #endif
-    }
-    return melhor_solucao;
-}
-
-
-
-Solucao Grasp::grasp_reativo(){
-    #ifdef DEBUG
-        cout << "-----------GRASP------" << endl;
-    #endif
+#ifdef DEBUG
+    cout << "-----------GRASP------" << endl;
+#endif
 
     solucoes_elites.clear();
 
@@ -419,23 +311,26 @@ Solucao Grasp::grasp_reativo(){
     }
 
     for(int i = 0; i < qtd_max_iteracoes; i++){
-        #ifdef DEBUG
-			cout << "Iteracao: " << i << endl;
-        #endif
+
+#ifdef DEBUG
+        cout << "Iteracao: " << i << endl;
+#endif
 
         int indice_alfa = get_alfa();
         double alfa = cons_X[indice_alfa];
 
-        #ifdef DEBUG
-            cout << "alpha = " << alfa << endl;
-            cout << "FASE CONSTRUCAO " << endl;
-        #endif
+#ifdef DEBUG
+        cout << "alpha = " << alfa << endl;
+        cout << "FASE CONSTRUCAO " << endl;
+#endif
+
 
         Solucao solucao = construcao(alfa);
 
-        #ifdef DEBUG
-            cout << "Solucao size construcao : "  << solucao.vectorBits.count() << endl;
-        #endif
+
+#ifdef DEBUG
+        cout << "Solucao size construcao : "  << solucao.vectorBits.count() << endl;
+#endif
 
 
 
@@ -443,40 +338,39 @@ Solucao Grasp::grasp_reativo(){
         //se a solução obtida pela construção é pelo menos 80% da melhor solução encontrada até agora.
         if(solucao.vectorBits.count() >= 0.8*melhor_solucao.vectorBits.count()) {
 
-					busca_local(solucao);
+            busca_local(solucao);
 
-					/*
-					Aqui implemento a maneira que a solução encontrada na busca local será inserida na lista elite.
-					Quando a quantidade máxima não é alcançada, adiciona na lista elite.
-					Quando a quantidade máxima já é alcançada, trocamos a solução da lista elite mais parecida com a solução
-					e que tenha custo pior que da solução.
+            /*
+                                        Aqui implemento a maneira que a solução encontrada na busca local será inserida na lista elite.
+                                        Quando a quantidade máxima não é alcançada, adiciona na lista elite.
+                                        Quando a quantidade máxima já é alcançada, trocamos a solução da lista elite mais parecida com a solução
+                                        e que tenha custo pior que da solução.
 
-					Nao coloquei isso dentro da propria função path_relinking, porque achei que ficaria mais complicado o retorno
-					da função path_relinking.
-					*/
+                                        Nao coloquei isso dentro da propria função path_relinking, porque achei que ficaria mais complicado o retorno
+                                        da função path_relinking.
+            */
 
-					if(solucoes_elites.size() >= 1){
-							solucao = path_relinking(solucao);
-					}
-					//Atualizo a lista elite.
-					if(solucoes_elites.size() < max_elite) solucoes_elites.push_back(solucao);
-					else{
-							int menor_dif = graph.k + 12;
-							int posicao_menor_dif = -1;
-							for(int j = 0; j < solucoes_elites.size(); j++){
-									if(solucao.vectorBits.count() > solucoes_elites[j].vectorBits.count()){
-											int dif = diferenca_simetrica(solucao, solucoes_elites[j], graph.k);
-											if(menor_dif > dif){
-													menor_dif = dif;
-													posicao_menor_dif = j;
-											}
-									}
-							}
-							if(posicao_menor_dif != -1){
-                                solucoes_elites[posicao_menor_dif] = solucao;
-							}
-					}
-
+            if(solucoes_elites.size() >= 1){
+                solucao = path_relinking(solucao);
+            }
+            //Atualizo a lista elite.
+            if(solucoes_elites.size() < max_elite) solucoes_elites.push_back(solucao);
+                else{
+                int menor_dif = graph.k + 12;
+                int posicao_menor_dif = -1;
+                for(int j = 0; j < solucoes_elites.size(); j++){
+                    if(solucao.vectorBits.count() > solucoes_elites[j].vectorBits.count()){
+                        int dif = diferenca_simetrica(solucao, solucoes_elites[j], graph.k);
+                        if(menor_dif > dif){
+                            menor_dif = dif;
+                            posicao_menor_dif = j;
+                        }
+                    }
+                }
+                if(posicao_menor_dif != -1){
+                    solucoes_elites[posicao_menor_dif] = solucao;
+                }
+            }
         }
 
         if(i == 0) melhor_solucao = solucao;
@@ -486,21 +380,128 @@ Solucao Grasp::grasp_reativo(){
         }
 
         cont[indice_alfa]++;
-		score[indice_alfa] += solucao.vectorBits.count();
+        score[indice_alfa] += solucao.vectorBits.count();
 
-        #ifdef DEBUG
-			printf("cont[%d] = %d, score[%d] = %lf\n", indice_alfa, cont[indice_alfa], indice_alfa, score[indice_alfa]);
-		#endif
+#ifdef DEBUG
+        printf("cont[%d] = %d, score[%d] = %lf\n", indice_alfa, cont[indice_alfa], indice_alfa, score[indice_alfa]);
+#endif
+
+
+#ifdef DEBUG
+        cout << "Solucao size final : "  << solucao.vectorBits.count() << endl;
+        cout << "--------------------------------------" << endl;
+#endif
+    }
+    return melhor_solucao;
+}
+
+
+
+Solucao Grasp::grasp_reativo(clock_t t1){
+#ifdef DEBUG
+    cout << "-----------GRASP------" << endl;
+#endif
+
+    solucoes_elites.clear();
+
+    int custo_melhor_solucao = 0;
+
+    Solucao melhor_solucao(graph.tam_L);
+
+    melhor_solucao_construcao = -1;
+
+    bool apicar_buscar_path = true;
+
+    //Inicializando os valores iniciais do grasp reativo
+    for(int i = 0; i < NUMBER_VALUES; i++){
+        cont[i] = 0;
+        score[i] = 0.0;
+        prob_X[i] = 1.0/NUMBER_VALUES;
+    }
+
+    clock_t t2 = clock();
+    double elapsed = (t2 - t1) / (double) CLOCKS_PER_SEC;
+
+    // for(int i = 0; i < qtd_max_iteracoes; i++){
+    int i = 0;
+    while (elapsed < (double) graph.k / 10) {
+        int indice_alfa = get_alfa();
+        double alfa = cons_X[indice_alfa];
+
+        Solucao solucao = construcao(alfa);
+
+        //No artigo eles relatam que só aplicam a busca local e path relinking
+        //se a solução obtida pela construção é pelo menos 80% da melhor solução encontrada até agora.
+        if(solucao.vectorBits.count() >= 0.8*melhor_solucao.vectorBits.count()) {
+
+            busca_local(solucao);
+
+            /*
+                Aqui implemento a maneira que a solução encontrada na busca local será inserida na lista elite.
+                Quando a quantidade máxima não é alcançada, adiciona na lista elite.
+                Quando a quantidade máxima já é alcançada, trocamos a solução da lista elite mais parecida com a solução
+                e que tenha custo pior que da solução.
+
+                Nao coloquei isso dentro da propria função path_relinking, porque achei que ficaria mais complicado o retorno
+                da função path_relinking.
+            */
+
+            if(solucoes_elites.size() >= 1){
+                solucao = path_relinking(solucao);
+            }
+            //Atualizo a lista elite.
+            if(solucoes_elites.size() < max_elite) solucoes_elites.push_back(solucao);
+                else{
+                int menor_dif = graph.k + 12;
+                int posicao_menor_dif = -1;
+                for(int j = 0; j < solucoes_elites.size(); j++){
+                    if(solucao.vectorBits.count() > solucoes_elites[j].vectorBits.count()){
+                        int dif = diferenca_simetrica(solucao, solucoes_elites[j], graph.k);
+                        if(menor_dif > dif){
+                            menor_dif = dif;
+                            posicao_menor_dif = j;
+                        }
+                    }
+                }
+                if(posicao_menor_dif != -1){
+                    solucoes_elites[posicao_menor_dif] = solucao;
+                }
+            }
+
+        }
+
+        t2 = clock();
+
+        if(i == 0) {
+            melhor_solucao = solucao;
+            melhor_solucao.timeFound = (t2 - t1) / (double) CLOCKS_PER_SEC;
+        }
+        else if(solucao.vectorBits.count() > melhor_solucao.vectorBits.count()){
+            melhor_solucao = solucao;
+            melhor_solucao.timeFound = (t2 - t1) / (double) CLOCKS_PER_SEC;
+            if(melhor_solucao.vectorBits.count() == graph.tam_R) break;
+        }
+
+        cont[indice_alfa]++;
+        score[indice_alfa] += solucao.vectorBits.count();
+
+#ifdef DEBUG
+        printf("cont[%d] = %d, score[%d] = %lf\n", indice_alfa, cont[indice_alfa], indice_alfa, score[indice_alfa]);
+        #endif
 
 
         if(i % NUMBER_VALUES == 0){
             atualizacao_probabilidade(melhor_solucao.vectorBits.count());
         }
 
-        #ifdef DEBUG
-            cout << "Solucao size final : "  << solucao.vectorBits.count() << endl;
-            cout << "--------------------------------------" << endl;
-        #endif
+        i++;
+        t2 = clock();
+        elapsed = (t2 - t1) / (double) CLOCKS_PER_SEC;
+
+#ifdef DEBUG
+        cout << "Solucao size final : "  << solucao.vectorBits.count() << endl;
+        cout << "--------------------------------------" << endl;
+#endif
     }
     return melhor_solucao;
 }

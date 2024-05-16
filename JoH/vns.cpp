@@ -12,31 +12,31 @@ void addLista(Lista* fila, bitset<nElem> elem){
     novoItem->chave = elem;
     novoItem->proximo = NULL;
 
-	novoItem->proximo = fila->inicio;
-	fila->inicio = novoItem;
+    novoItem->proximo = fila->inicio;
+    fila->inicio = novoItem;
 
     fila->tamanho++;
 }
 
 bool testList(Lista* fila, bitset<nElem> elem, int k){
-	if(fila->inicio == NULL) return true;
+    if(fila->inicio == NULL) return true;
 
-	Item *atual = fila->inicio;
-	while(atual != NULL){
-		bitset<nElem> bit_aux = Interseccao(elem, atual->chave);
-		int qtd = bit_aux.count();
-		if(qtd == k) return false;
-		atual = atual->proximo;
-	}
-	return true;
+    Item *atual = fila->inicio;
+    while(atual != NULL){
+        bitset<nElem> bit_aux = Interseccao(elem, atual->chave);
+        int qtd = bit_aux.count();
+        if(qtd == k) return false;
+        atual = atual->proximo;
+    }
+    return true;
 }
 
 void liberarLista(Lista* fila){
     Item *ultimo = fila->inicio;
     while(ultimo != NULL){
-       Item *pt = ultimo;
-       ultimo = ultimo->proximo;
-       free(pt);
+        Item *pt = ultimo;
+        ultimo = ultimo->proximo;
+        free(pt);
     }
     free(fila);
 }
@@ -146,7 +146,7 @@ Dado o valor de q_max e o valor de q corrente, ele retorna em qual quartil de q_
 **/
 double get_erro_quartil(int q_max, int q){
     int parte = q_max/4;
-	parte = (parte == 0 ? 1 : parte);
+    parte = (parte == 0 ? 1 : parte);
 
     if(q <= parte) return 0.2;
     else if(q <= 2*parte) return 0.3;
@@ -155,7 +155,7 @@ double get_erro_quartil(int q_max, int q){
 }
 
 
-Solucao VNS_Reativo(Graph &graph, Solucao &solucao_entrada){
+Solucao VNS_Reativo(Graph &graph, Solucao &solucao_entrada, clock_t t1){
     Grasp grasp;
     Solucao solucao = solucao_entrada;
     Solucao solucao_candidata = solucao_entrada;
@@ -170,27 +170,35 @@ Solucao VNS_Reativo(Graph &graph, Solucao &solucao_entrada){
     int q_max = graph.k, q_step = q_step_min, seqs = 500, q, qtd_sem_melhorar = 0;
     int q_step_max = (floor(0.2*graph.k) < q_step_min ? q_step_min : floor(0.2*graph.k));
 
-	if(graph.k <= 3){
-		q_max = 1;
-		q_step = 1;
-		q_step_max = 1;
-	}else if(graph.k < 10){
-		q_max = 0.5*graph.k + 1;
-		q_step = 1;
-		q_step_max = 1;
-	}
-	Lista* lista = criarLista();
-	addLista(lista, solucao_candidata.vectorBits);
+    if(graph.k <= 3){
+        q_max = 1;
+        q_step = 1;
+        q_step_max = 1;
+    }else if(graph.k < 10){
+        q_max = 0.5*graph.k + 1;
+        q_step = 1;
+        q_step_max = 1;
+    }
+    Lista* lista = criarLista();
+    addLista(lista, solucao_candidata.vectorBits);
     int count_total = 0, qtd_igual = 0;
-    for (int i = 0; i < seqs; i++) {
+    clock_t t2 = clock();
+
+    double elapsed = (t2 - t1) / (double) CLOCKS_PER_SEC;
+
+    // for (int i = 0; i < seqs; i++) {
+    while (elapsed <= (double)graph.k / 10) {
         q = 1;
         qtd_sem_melhorar = 0;
-		qtd_igual = 0;
+        qtd_igual = 0;
         while(q <= q_max){
             int indice_alfa = grasp.get_alfa();
             double alfa = grasp.cons_X[indice_alfa];
             Solucao solucao_linha = SO_Reativo(graph, solucao_candidata, q, alfa);
-			solucao_linha = VND(graph, solucao_linha);
+            solucao_linha = VND(graph, solucao_linha);
+            t2 = clock();
+
+            solucao_linha.timeFound = (t2 - t1) / (double) CLOCKS_PER_SEC;
 
             if(solucao_linha.vectorBits.count() > solucao.vectorBits.count()){
                 solucao = solucao_linha;
@@ -221,8 +229,10 @@ Solucao VNS_Reativo(Graph &graph, Solucao &solucao_entrada){
             }
             count_total++;
         }
+
+        elapsed = (clock() - t1) / (double) CLOCKS_PER_SEC;
     }
-	liberarLista(lista);
+    liberarLista(lista);
 
     return solucao;
 }
